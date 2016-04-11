@@ -6,7 +6,8 @@ import java.util.Random;
 
 
 
-public class Computer {
+
+public class Computer { 
 
 	final int pawn=1,rook=4,knight=3,bishop=3,queen=8,king=10;
 	final static int empty=0,friend=1,enemy=2;
@@ -15,6 +16,9 @@ public class Computer {
 	static ArrayList<int[]> humanLocs;
 	static int humans=0;
 	static int comps=0;
+	private final boolean compType=true;
+	private final boolean humType=false;
+
 
 	public Board makeMove(Board board) throws InterruptedException{
 		getLocs(board,true);
@@ -26,7 +30,7 @@ public class Computer {
 			if(move==null)
 				move=canSacrifice(board);
 			if(move==null)
-				move=bestAttack(board,allMoves(board));
+				move=bestAttack(board,allMoves(board,compType));
 			//Move move= randomMove(board);
 			return board.makeChange(move.loc, move.mov, Board.pieceColor.White);
 		}else{
@@ -40,7 +44,7 @@ public class Computer {
 				Board ans=board.makeChange(move.loc, move.mov, Board.pieceColor.White);
 				return ans;
 			}else{
-				Move curr=defend(board,danger);
+				Move curr=defend(board);
 				Board ans=board.makeChange(curr.loc, curr.mov, Board.pieceColor.White);
 				return ans;
 			}
@@ -65,6 +69,13 @@ public class Computer {
 				this.humVal=0;
 			this.mov=mov;
 			this.loc=loc;
+		}
+
+		public boolean compareMoves(Move move){
+			if(move.loc[0]==this.loc[0] && move.loc[1]==this.loc[1])
+				return true;
+			else
+				return false;
 		}
 	}
 
@@ -95,10 +106,10 @@ public class Computer {
 		ans.add(humLocs);
 		return ans;
 	}
-	
+
 	public Move randomMove(Board board) throws InterruptedException{
 
-		ArrayList<Move> moves=allMoves(board);
+		ArrayList<Move> moves=allMoves(board,compType);
 		return bestAttack(board,moves);
 	}
 
@@ -313,52 +324,98 @@ public class Computer {
 		return 10;
 	}
 
-
-	public ArrayList<Move> allMoves(Board board){
+	public ArrayList<Move> allMoves(Board board, Boolean player){
 		ArrayList<Move> moves=new ArrayList<Move>();
 		ArrayList<ArrayList<int[]>> locs=getLocs(board, false);
-		ArrayList<int[]> compLocs=locs.get(0);
-		for(int[] comp:compLocs){
+		ArrayList<int[]> allLocs;
+		if(player==compType){
+			allLocs=locs.get(0);
+		}else{
+			allLocs=locs.get(1);
+		}
+		for(int[] loc:allLocs){
 			for(int i=0;i<8;i++){
 				for(int j=0;j<8;j++){
-					if(compCanMovePiece(board,comp,new int[]{i,j}) && board.getVal(comp)!=0)
-						moves.add(new Move(board,comp,new int[]{i,j}));
+					if(player==compType){
+						if(compCanMovePiece(board,loc,new int[]{i,j}) && board.getVal(loc)!=0)
+							moves.add(new Move(board,loc,new int[]{i,j}));
+					}else{
+						if(Human.canMovePiece(board,loc,new int[]{i,j}) && board.getVal(loc)!=0)
+							moves.add(new Move(board,loc,new int[]{i,j}));						
+					}
 				}
 			}
 		}
-		
+
 		return moves;
+	}
+
+	public ArrayList<Move> takesMostSpace(Board board) throws InterruptedException{
+		int humMoves;
+		ArrayList<Move> ans=new ArrayList<Move>();
+		int minMoves=100;
+		ArrayList<Move> moves =allMoves(board,compType);
+		Board fake;
+		for(Move move:moves){
+			fake=board.boardCopy();
+			fake.makeChange(move.loc, move.mov, Board.pieceColor.White);
+			humMoves = allMoves(fake,humType).size();
+			if(humMoves < minMoves){
+				minMoves = humMoves;
+				ans=new ArrayList<Move>();
+				ans.add(move);
+			}else if(humMoves == minMoves){
+				ans.add(move);
+			}
+		}
+
+		return ans;
 	}
 
 	public int[] highestDanger(Board board, ArrayList<int[][]> ans){
 		int[] high=new int[]{};
 		int most=0;
 		for(int[][] move:ans){
-			for(int[] comp:move){
-				if(most==0|| board.getVal(comp)>most){
-					high=comp;
-					most=board.getVal(comp);
-				}
 
+			if(most==0|| board.getVal(move[0])>most){
+				high=move[0];
+				most=board.getVal(move[0]);
 			}
+
 		}
 		return high;
 	}
 
-	public void testMovesDanger(Board board,ArrayList<Move> moves) throws InterruptedException{
-
+	public ArrayList<Move> safestMoves(Board board,ArrayList<Move> moves) throws InterruptedException{
+		Board newBoard;
+		int min=20;
+		ArrayList<Move> ans=new ArrayList<Move>();
+		Move best=moves.get(0);
 		for(Move move:moves){
-			Board newBoard=board.boardCopy();
+			newBoard=board.boardCopy();
 			newBoard=newBoard.makeChange(move.loc, move.mov, Board.pieceColor.White);
-
+			int cost=dangerValue(newBoard,inDanger(newBoard));
+			if(cost<min	){
+				min=cost;
+				best=move;
+				if(cost==0)
+					ans.add(move);
+			}else if(cost==0){
+				ans.add(move);
+			}
 		}
+		if(ans.isEmpty())
+			ans.add(best);
+		return ans;
 	}
 
 	public boolean isDefended(Board board,int[] comp,int[] human){
 		int dangerVal=board.getVal(comp);
-		Board newBoard=board.boardCopy().erasePiece(comp);
-		
-		ArrayList<Move> moves=allMoves(newBoard);
+		Board newBoard=board.boardCopy();
+		newBoard.erasePiece(comp);
+		newBoard.fakePiece(comp,humType);
+
+		ArrayList<Move> moves=allMoves(newBoard,compType);
 
 		for(Move jab:moves){
 			if(human!=null){
@@ -376,7 +433,7 @@ public class Computer {
 		Move ans=null;
 		int high=board.getVal(highestDanger(board,inDanger(board)));
 
-		for(Move move:allMoves(board)){
+		for(Move move:allMoves(board,compType)){
 			Board newBoard=board.boardCopy();
 			newBoard=newBoard.makeChange(move.loc, move.mov, Board.pieceColor.White);
 			Move retVal=dangerCanKillHigher(newBoard);
@@ -390,11 +447,15 @@ public class Computer {
 		return ans;		
 	}
 
-	public Move dangerCanKillHigher(Board board){
+	public Move dangerCanKillHigher(Board board) throws InterruptedException{
 		Move ans=null;
 		int high=board.getVal(highestDanger(board,inDanger(board)));
-		for(Move move:allMoves(board)){
-			if(move.humVal>high){
+		Board fakeBoard;
+		for(Move move:allMoves(board,compType)){
+			fakeBoard=board.boardCopy();
+			fakeBoard.makeChange(move.loc,move.mov,Board.pieceColor.White);
+			int[] fakeHigh=highestDanger(fakeBoard,inDanger(fakeBoard));
+			if(move.humVal>high && fakeBoard.getVal(fakeHigh)<move.humVal){// ||(fakeHigh.length!=0 &&fakeBoard.getVal(fakeHigh)<high)){
 				ans= move;
 			}
 		}
@@ -409,7 +470,7 @@ public class Computer {
 			int initial=count;
 			int[] curr=danger.get(count)[1];
 			Board fake=board.boardCopy();
-			fake.fakePiece(curr);
+			fake.fakePiece(curr,compType);
 			for(int[] jab: humanLocs){
 				int[] jim=new int[]{jab[0],jab[1]};
 				int[] bob=new int[]{curr[0],curr[1]};
@@ -423,7 +484,7 @@ public class Computer {
 		}
 		ArrayList<Move> moves=new ArrayList<Move>();
 		for(int[][] dang:danger){
-			for(Move move:allMoves(board)){
+			for(Move move:allMoves(board,compType)){
 				if(move.mov[0]==dang[1][0] && move.mov[1]==dang[1][1]){
 					moves.add(move);
 				}
@@ -437,7 +498,7 @@ public class Computer {
 
 	public Move canAttackFree(Board board) throws InterruptedException{
 		Move ans=null;
-		ArrayList<Move> allmoves=allMoves(board);
+		ArrayList<Move> allmoves=allMoves(board,compType);
 		for(Move move: allmoves){
 			if(move.humVal>0){
 				Board brd=board.boardCopy();
@@ -454,12 +515,12 @@ public class Computer {
 
 	public Move canSacrifice(Board board) throws InterruptedException{
 		Move ans=null;
-		for(Move move:allMoves(board)){
-			if(move.compVal>move.humVal && (ans==null || move.humVal>ans.humVal)){
+		for(Move move:allMoves(board,compType)){
+			if(move.humVal>move.compVal && (ans==null || move.humVal>ans.humVal)){
 				Board fake=board.boardCopy();
 				fake.makeChange(move.loc, move.mov, Board.pieceColor.White);
 				int [] high=highestDanger(fake,inDanger(fake));
-				if(high.length==1 && high[0]==move.compVal)
+				if(fake.getVal(high)<move.humVal)
 					ans=move;
 			}
 		}
@@ -474,9 +535,9 @@ public class Computer {
 			int count=0;
 			Board brd=board.boardCopy();
 			brd.makeChange(move1.loc, move1.mov, Board.pieceColor.White);
-			ArrayList<Move> retMoves=allMoves(brd);
+			ArrayList<Move> retMoves=allMoves(brd,compType);
 			for(Move move2:retMoves){
-				if(humanLocs.contains(new int[]{move2.mov[0],move2.mov[1]}))
+				if(humanLocs.contains(new int[]{move2.mov[0],move2.mov[1]}) && inDanger(brd).size()==0)
 					count++;
 			}
 			if(count>high){
@@ -486,19 +547,36 @@ public class Computer {
 		}
 		if(ans==null){
 			Random rand=new Random();
-			int n=rand.nextInt(moves.size());
-			int count=0;
-			while(!isDefended(board,moves.get(n).loc,null)){
-				if(count==moves.size())
-					break;
-				n=rand.nextInt(moves.size());
-				count++;
+			ArrayList<Move> safeMoves=safestMoves(board,allMoves(board,compType));
+			ArrayList<Move> movesMostSpace=takesMostSpace(board);
+			Move ret=safeAndSpaceMove(safeMoves,movesMostSpace);
+			if(ret!=null)
+				return ret;
 
-			}
-			return moves.get(n); 
-
+			int n=rand.nextInt(safeMoves.size());		
+			return safeMoves.get(n); 
 		}else
 			return ans;
+	}
+
+	public Move safeAndSpaceMove(ArrayList<Move> safeMoves, ArrayList<Move> mostSpaceMoves){
+		Move ans=null;
+		ArrayList<Move> goodMoves=new ArrayList<Move>();
+		for(Move safeMove:safeMoves){
+			for(Move mostMove:mostSpaceMoves){
+				if(safeMove.compareMoves(mostMove)){
+					goodMoves.add(safeMove);
+				}
+			}
+		}
+
+		if(goodMoves.size()!=0){
+			Random rand=new Random();
+			int n=rand.nextInt(goodMoves.size());	
+			if(goodMoves.size()>0)
+				ans=goodMoves.get(n);
+		}
+		return ans;
 	}
 
 	public ArrayList<int[][]> inDanger(Board board){
@@ -515,25 +593,39 @@ public class Computer {
 		return ans;
 	}
 
+	public int totalDangerValue(Board board, ArrayList<int[][]> danger){
+		int totalCost=0;
+		for(int[][] jab:danger){
+			totalCost+=board.getVal(jab[0]);
+		}
+		return totalCost;
+	}
+
 	public int dangerValue(Board board,ArrayList<int[][]> danger){
 		int cost=0;
 		for(int[][] jab:danger){
-			if(board.getVal(jab[1])>cost)
-				cost=board.getVal(jab[1]);
+			if(board.getVal(jab[0])>cost)
+				cost=board.getVal(jab[0]);
 		}
 		return cost;
 	}
 	//If pieces are in danger then defend the most points of pieces
-	public Move defend(Board board,ArrayList<int[][]> danger) throws InterruptedException{
+	public Move defend(Board board) throws InterruptedException{
 		int min=20;
+		int totalCost=200;
 		int curr;
+		ArrayList<int[][]> danger;
+		int totalDanger=0;
 		Move best=null;
-		for(Move move:allMoves(board)){
+		for(Move move:allMoves(board,compType)){
 			Board fake=board.boardCopy();
 			fake=fake.makeChange(move.loc, move.mov, Board.pieceColor.White);
-			if((curr=dangerValue(fake,inDanger(fake)))<min){
+			danger=(inDanger(fake));
+			totalDanger=totalDangerValue(board,danger);
+			if((curr=dangerValue(fake,danger))<min || (curr==min && totalDanger<totalCost)){
 				min=curr;
 				best=move;
+				totalCost=totalDanger;
 			}
 		}
 		return best;

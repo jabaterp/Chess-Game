@@ -1,5 +1,6 @@
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 import javax.swing.JTextField;
@@ -23,6 +24,11 @@ public class Play {
 				Computer comp=new Computer();
 				
 				newBoard=comp.makeMove(Board.board);
+				int i =Board.oldBoards.size()-1;
+				while(i>Board.boardNum){
+					Board.oldBoards.remove(i);
+					i--;
+				}
 				Board.oldBoards.add(newBoard.boardCopy());
 				Display.makeChange(newBoard);
 				Board.boardNum++;
@@ -72,10 +78,22 @@ public class Play {
 				newBoard2=Human.move(Board.board, loc, move);
 				Board.board=newBoard2;
 				Display.makeChange(newBoard2);
+				int i=Board.oldBoards.size()-1;
+				while(i>Board.boardNum){
+					Board.oldBoards.remove(i);
+					i--;
+				}
+				copyBoardList();
 				Board.oldBoards.add(newBoard2.boardCopy());
 				Board.boardNum++;
 				turn=comp;
 			}
 		}
+	}
+	public static void copyBoardList(){
+		ArrayList<Board> boardCopy=new ArrayList<Board>();
+		for(int i=0; i<=Board.boardNum; i++)
+			boardCopy.add(Board.oldBoards.get(i));
+		Board.oldBoards=boardCopy;
 	}
 }

@@ -58,10 +58,11 @@ public class Display{
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				if(Board.boardNum>=Board.oldBoards.size())
+				if(Board.boardNum==Board.oldBoards.size()-1)
 					return;
 				else{
-					Display.makeChange(Board.oldBoards.get(++Board.boardNum+1));
+					Board.boardNum+=2;
+					Display.makeChange(Board.oldBoards.get(Board.boardNum));
 				}
 
 			}
@@ -76,14 +77,10 @@ public class Display{
 				if(Board.boardNum==0)
 					return;
 				else{
-					if(Board.boardNum==Board.oldBoards.size()){
-						Board.board=Board.oldBoards.get(Board.boardNum-2);
-						Display.makeChange(Board.oldBoards.get(Board.boardNum---2));
-					}else{
-						Board.board=Board.oldBoards.get(Board.boardNum-1);
-						Display.makeChange(Board.oldBoards.get(Board.boardNum---1));
-
-					}
+						Board.boardNum-=2;
+						Board.board=Board.oldBoards.get(Board.boardNum);
+						Display.makeChange(Board.oldBoards.get(Board.boardNum));
+					
 				}
 
 			}

@@ -28,7 +28,7 @@ public class Board {
 		piece piece;
 		pieceColor pieceColor;
 		int pieceVal;
-		spaceColor spaceColor;
+		spaceColor spaceColor; 
 
 		public Space(spaceColor spaceColor,pieceColor pieceColor, int[] location, piece piece, int val){
 			this.pieceColor=pieceColor;
@@ -44,8 +44,8 @@ public class Board {
 		Board newGuy=new Board();
 		for(int i=0;i<8;i++){
 			for(int j=0;j<8;j++){
-				newGuy.brd[i][j]=new Space(board.brd[i][j].spaceColor,board.brd[i][j].pieceColor,
-						board.brd[i][j].location,board.brd[i][j].piece,board.brd[i][j].pieceVal);
+				newGuy.brd[i][j]=new Space(this.brd[i][j].spaceColor,this.brd[i][j].pieceColor,
+						this.brd[i][j].location,this.brd[i][j].piece,this.brd[i][j].pieceVal);
 			}
 		}
 		return newGuy;
@@ -167,9 +167,14 @@ public class Board {
 		brd[loc[0]][loc[1]].pieceColor=pieceColor.Empty;
 		return this;
 	}
-	public Board fakePiece(int[] loc){
+	public Board fakePiece(int[] loc,boolean color){
+		if(color){
 		brd[loc[0]][loc[1]].piece=piece.wBishop;
 		brd[loc[0]][loc[1]].pieceColor=pieceColor.White;
+		}else{
+			brd[loc[0]][loc[1]].piece=piece.bBishop;
+			brd[loc[0]][loc[1]].pieceColor=pieceColor.Black;			
+		}
 		return this;
 	}
 	
@@ -191,7 +196,14 @@ public class Board {
 		brd[loc[0]][loc[1]].pieceColor=pieceColor.Empty;
 		brd[move[0]][move[1]].piece=piece;
 		brd[move[0]][move[1]].pieceColor=color;
+		brd[loc[0]][loc[1]].pieceVal=0;
 		changed=true;
+		if(piece==Board.piece.wPawn && move[0]==0) {
+			brd[move[0]][move[1]].piece=Board.piece.wQueen;
+		}else if (piece ==Board.piece.bPawn && move[0]==7){
+			brd[move[0]][move[1]].piece=Board.piece.bQueen;
+		}
+				
 		return this;
 	}
 
